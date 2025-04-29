@@ -1,0 +1,5 @@
+ollama
+rich
+arxiv
+requests
+xmltodict
