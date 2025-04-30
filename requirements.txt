@@ -3,3 +3,5 @@ rich
 arxiv
 requests
 xmltodict
+pydantic
+pyyaml

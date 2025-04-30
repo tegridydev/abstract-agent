@@ -1,63 +1,150 @@
-# abstract-agent config
+# agents_config.yaml
+# Config Driven Agent Pipeline
 # Author: tegridydev
 # Repo: https://github.com/tegridydev/abstract-agent
 # License: MIT
 # Year: 2025
-# Edit this file to change the agent pipeline, personas, and prompt logic.
 
-agents:
-  - name: Agent A
-    model: qwen3:0.6b
+pipeline_name: Research Hypothesis Generation
+version: 2.0
+ollama_host: 'http://localhost:11434'
+
+context_init:
+  - topic
+
+steps:
+  - name: Literature Search
+    type: tool_call
+    function: multi_source.aggregate_sources
+    inputs: [topic]
+    outputs: [top_papers, all_fetched_papers_count]
+    params:
+      max_results: 7 # Number of *top* papers to return after scoring
+      summarize: false
+
+  - name: Format Paper Abstracts for Prompt
+    type: tool_call
+    function: agent_helpers.format_papers_for_prompt
+    inputs: [top_papers]
+    outputs: [top_papers_abstracts_formatted]
+    params:
+      max_length: 500
+
+  - name: Summarize Literature
+    type: ollama_call
+    model: gemma3:4b
+    inputs: [topic, top_papers_abstracts_formatted]
+    outputs: [literature_summary]
+    prompt_template: |
+      You are a research assistant. Summarize the key findings, trends, and gaps based on the following abstracts related to the topic '{topic}'. Be concise and insightful.
+
+      Abstracts:
+      {top_papers_abstracts_formatted}
+
+  - name: Agent A - Breakdown
+    type: llm_agent
+    model: gemma3:4b
     persona: "Curious research assistant with encyclopedic knowledge and a drive to break down complex topics."
-    prompt: |
-      You are {name}, a {persona}.
-      Your task is to break down the user's research topic into its core components. List all relevant facts, subtopics, and prior knowledge. Identify any foundational concepts or assumptions. Push yourself to be thorough and creative.
-      
+    inputs: [topic]
+    outputs: [breakdown]
+    prompt_template: |
+      You are a {persona}. Your task is to break down the user's research topic into its core components. List all relevant facts, subtopics, and prior knowledge. Identify any foundational concepts or assumptions. Push yourself to be thorough and creative.
+
       Topic: {topic}
 
-  - name: Agent B
-    model: qwen3:0.6b
+  - name: Agent B - Critique
+    type: llm_agent
+    model: gemma3:4b
     persona: "Skeptical literature reviewer who excels at critical analysis and finding gaps in current research."
-    prompt: |
-      You are {name}, a {persona}.
-      Review the following breakdown and the multi-source literature review. Identify gaps, contradictions, or unexplored areas. Critique the current state of research, highlight hot trends, and flag anything that seems over- or under-explored. Be brutally honest and push for novelty.
-      
-      Topic: {topic}
-      Breakdown:
-      {breakdown}
-      Literature Review:
-      {literature}
+    inputs: [topic, breakdown, literature_summary]
+    outputs: [critical_review]
+    prompt_template: |
+      You are a {persona}. Review the following topic breakdown and the multi-source literature summary. Identify gaps, contradictions, or unexplored areas. Critique the current state of research, highlight hot trends, and flag anything that seems over- or under-explored. Be brutally honest and push for novelty.
 
-  - name: Agent C
-    persona: "Methodical synthesizer who integrates feedback and generates new connections."
-    prompt: |
-      You are {name}, a {persona}.
-      Synthesize the breakdown and the critical review. Propose a refined research direction, combining the most promising ideas and addressing the gaps or contradictions. Think outside the box and suggest connections that aren't obvious.
-      
       Topic: {topic}
+
       Breakdown:
       {breakdown}
+
+      Literature Summary:
+      {literature_summary}
+
+  - name: Agent C - Synthesis
+    type: llm_agent
+    model: gemma3:4b
+    persona: "Methodical synthesizer who integrates feedback and generates new connections."
+    inputs: [topic, breakdown, critical_review]
+    outputs: [synthesis]
+    prompt_template: |
+      You are a {persona}. Synthesize the breakdown and the critical review. Propose a refined research direction, combining the most promising ideas and addressing the gaps or contradictions. Think outside the box and suggest connections that aren't obvious.
+
+      Topic: {topic}
+
+      Breakdown:
+      {breakdown}
+
       Critical Review:
       {critical_review}
 
-  - name: Agent D
+  - name: Agent D - Novelty Generation
+    type: llm_agent
+    model: gemma3:4b
     persona: "Innovative thinker and wild idea generator who is not afraid to propose bold, unconventional hypotheses."
-    prompt: |
-      You are {name}, a {persona}.
-      Take the refined direction and push it further. Propose a truly novel hypothesis that challenges assumptions or explores new territory. Justify why it is novel and what makes it potentially impactful.
-      
-      Topic: {topic}
-      Synthesis:
+    inputs: [topic, synthesis]
+    outputs: [novel_hypothesis]
+    prompt_template: |
+      You are {persona}. Take the refined direction based on the synthesis provided below. Propose ONLY ONE truly novel hypothesis that challenges assumptions or explores new territory regarding the topic '{topic}'.
+      Justify why this hypothesis is novel and potentially impactful in a separate section titled 'Rationale for Novelty:'.
+      Do NOT include your thinking process or any conversational filler. Output ONLY the 'Hypothesis:' section and the 'Rationale for Novelty:' section.
+
+      [Synthesis Provided]
       {synthesis}
 
-  - name: Agent E
+      [Your Output]
+      Hypothesis:
+      <Your novel hypothesis here>
+
+      Rationale for Novelty:
+      <Your justification here>
+
+  - name: Agent E - Academic Structuring
+    type: llm_agent
+    model: gemma3:4b
     persona: "Formal academic who polishes, structures, and references the final hypothesis for publication."
-    prompt: |
-      You are {name}, a {persona}.
-      Structure the final hypothesis as a publication-ready abstract. Explicitly reference the most relevant literature. Score the novelty and rationale for why this hypothesis is unique.
-      
-      Topic: {topic}
-      Novel Hypothesis:
+    inputs: [topic, novel_hypothesis, top_papers_abstracts_formatted]
+    outputs: [final_hypothesis_structured]
+    prompt_template: |
+      You are a {persona}.
+      Your task is to rewrite the provided 'Novel Hypothesis Text' into a concise, single-paragraph, publication-ready abstract for the topic '{topic}'.
+      Focus on clarity, impact, and formal academic tone. The core novelty must be highlighted.
+      Use the 'Literature Context' ONLY for background understanding and implicit referencing; DO NOT summarize the literature context in your output.
+      Output ONLY the final abstract text, without any preamble or explanation.
+
+      [Novel Hypothesis Text to Format]
       {novel_hypothesis}
-      References:
-      {references}
+
+      [Literature Context - for background ONLY]
+      {top_papers_abstracts_formatted}
+
+      [Formatted Abstract Output]
+
+  - name: Novelty Assessment
+    type: ollama_call
+    model: gemma3:4b
+    inputs: [final_hypothesis_structured, top_papers_abstracts_formatted]
+    outputs: [novelty_assessment]
+    prompt_template: |
+      You are an expert research evaluator. Assess how novel the proposed hypothesis is compared to the provided abstracts of related papers. Explain your reasoning. Score the novelty on a scale of 1 (not novel) to 10 (highly novel).
+
+      [Hypothesis]
+      {final_hypothesis_structured}
+
+      [Related Paper Abstracts]
+      {top_papers_abstracts_formatted}
+    run_if: "context.get('final_hypothesis_structured')"
+
+final_outputs:
+  - final_hypothesis_structured
+  - novelty_assessment
+  - top_papers
+  - all_fetched_papers_count
