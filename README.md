@@ -71,7 +71,7 @@ and the selected models are local. Cloud models require consent, and a remote ho
 a warning. Topics, abstracts and generated content can appear in saved results.
 
 The local settings, caches, knowledge database and generated outputs are excluded from Git
-and the public export. Keep API keys in environment variables. More detail is in
+by the default ignore rules. Keep API keys in environment variables. More detail is in
 [privacy](docs/privacy.md) and [usage](docs/usage.md).
 
 The package version is **5.0.0**. The workflow and result schema are **6.0**.
@@ -84,7 +84,6 @@ They describe different parts of the project and are versioned separately.
 * [Model output and recovery](docs/model-output.md)
 * [Local research knowledge](docs/knowledge.md)
 * [Contributing and checks](CONTRIBUTING.md)
-* [Making a public copy](docs/export.md)
 
 Everything here is available under the MIT license. Feel free to read through, try things
 and build on it. See [LICENSE](LICENSE) for the terms.

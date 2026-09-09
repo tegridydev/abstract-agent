@@ -37,6 +37,5 @@ The knowledge store keeps source records and generated ideas in separate trust t
 Preferences contain settings rather than research content or API keys.
 
 Keep keys in environment variables. Default output, knowledge, cache and settings locations
-are ignored by Git and excluded from the public export. Custom locations need the same care.
-The [export script](export.md) uses an explicit file inventory and scans its copy before
-producing the ZIP. It leaves your private working files where they are.
+are ignored by Git. Custom locations need the same care. Review files before sharing them;
+research records and local credentials belong outside the public repository.

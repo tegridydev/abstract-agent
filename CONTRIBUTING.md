@@ -39,9 +39,5 @@ audit needs network access. Passing local tests does not replace that audit.
 
 ## Sharing the source
 
-Use the [public export script](docs/export.md). It copies only the files listed in
-`scripts/public_files.txt`, including tests and CI configuration. Add new public source files
-to that list when you add them to the project.
-
-Generated research, environments, caches, editor state and backups stay out of the export.
-The working project is left alone. The exported folder has no Git history.
+Keep generated research, environments, caches, editor state and backups out of the repository.
+Include the source, tests, documentation and CI configuration when sharing changes.
