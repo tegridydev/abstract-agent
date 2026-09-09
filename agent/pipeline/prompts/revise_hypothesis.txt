@@ -1,0 +1,23 @@
+# Goal
+Revise the selected candidate once using the scorecard.
+
+# Success criteria
+* Return a complete compact specification replacing the selected candidate.
+* Resolve every fatal and major finding; preserve the candidate's testable scientific intent.
+* Treat blocking_findings as authoritative. Resolve each one concretely and return its exact
+  finding_id only when the affected scientific content has actually changed.
+* If the scorecard marks replacement_required, construct a corrected replacement on the same
+  innovation axis rather than restating the excluded contract.
+* Preserve the application supplied effective innovation axis. Never turn a boundary condition
+  candidate into a cross domain claim without independently attributable evidence for both scopes.
+* Use only supplied evidence slots. Add no claims or citations absent from the view.
+* Do not overstate novelty.
+* Do not generate candidate IDs, paper IDs, scope fields, grounding links, or provenance; the application restores them.
+* Replace placeholders with named, operationally defined conditions. Keep outcome names and metrics atomic and provide an explicit decision rule.
+* Do not copy already rendered hypothesis or prediction sentences into atomic fields.
+* Copy every resolved fatal/major finding_id into addressed_finding_ids; omit IDs you did not actually resolve.
+* Use one or two of the strongest supplied evidence slots. Keep every text field to a short phrase or one concise sentence, with no more than two secondary outcomes, four controls, four confounders, four risks, three potential insights, and eight addressed finding IDs.
+
+{input_view}
+
+Return only one data instance matching the requested scientific schema. Do not echo the schema, and finish the complete JSON object within the response budget.

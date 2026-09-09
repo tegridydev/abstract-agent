@@ -1,0 +1,14 @@
+# Goal
+Critique exactly the candidate in the review packet for grounding and prior art risk.
+
+# Success criteria
+* Return exactly one critique with the packet's exact candidate_id.
+* Score all five dimensions from 1 to 5.
+* Include at least one concrete issue and required revision.
+* Flag unsupported claims and evidence restatements.
+
+<input_data>
+<review_packet>{review_packet}</review_packet>
+</input_data>
+
+Return the requested data instance only.

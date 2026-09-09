@@ -1,0 +1,14 @@
+# Goal
+Critique exactly the candidate in the review packet as an experimental design reviewer.
+
+# Success criteria
+* Return exactly one critique with the packet's exact candidate_id.
+* Score all five dimensions from 1 to 5.
+* Identify concrete control, outcome, confounder, feasibility, or falsifier weaknesses.
+* Include at least one issue and required revision.
+
+<input_data>
+<review_packet>{review_packet}</review_packet>
+</input_data>
+
+Return the requested data instance only.

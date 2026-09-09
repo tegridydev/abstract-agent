@@ -1,0 +1,19 @@
+# Goal
+Repair the supplied candidate once so it can pass the listed scientific and grounding findings.
+
+# Success criteria
+* Preserve the exact candidate identity and effective innovation axis supplied by the application.
+* Resolve every blocking_finding using concrete changes to the affected scientific fields.
+* Copy the exact finding_id for every finding actually resolved into addressed_finding_ids.
+* Choose one or two supplied E slots whose source passages directly support the named conditions,
+  mechanism, and outcome. Do not cite or invent any other evidence.
+* If current evidence does not support the old intervention, comparator, or mechanism, replace
+  those scientific details with a testable direction that the supplied evidence does support.
+* Keep the intervention and comparator operationally distinct, the outcome and metric atomic, and
+  the decision rule measurable and capable of failure.
+* Treat novelty and mechanisms as proposals, not established facts.
+
+<repair_packet>{repair_packet}</repair_packet>
+
+Return only one complete data instance matching the requested scientific schema. Do not echo the
+schema or the repair packet. Finish the complete JSON object within the response budget.

@@ -1,0 +1,14 @@
+# Goal
+Return exactly one novelty verification for the candidate in the recovery packet.
+
+# Decision rules
+* prior_art_overlap only when cited prior art materially demonstrates the proposal.
+* novelty_supported only for a material evidenced difference.
+* uncertain when evidence is inadequate.
+* A non uncertain conclusion must cite core prior art IDs.
+
+<input_data>
+<recovery_packet>{novelty_packet}</recovery_packet>
+</input_data>
+
+Return the requested data instance only.

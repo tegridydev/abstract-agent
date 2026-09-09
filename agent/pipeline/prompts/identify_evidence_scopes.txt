@@ -1,0 +1,15 @@
+# Goal
+Identify zero to four genuinely distinct evidence clusters useful for research scope selection.
+
+# Success criteria
+* Each cluster has at least two direct evidence or transferable method papers.
+* Use only paper IDs present in input_data.
+* Do not force clusters when evidence is sparse or substantially overlapping.
+* Labels are short; descriptions explain the shared research focus.
+
+<input_data>
+<topic>{topic}</topic>
+<evidence_corpus>{formatted_papers}</evidence_corpus>
+</input_data>
+
+Return the requested data instance. Check that every supplied paper ID occurs verbatim in input_data.

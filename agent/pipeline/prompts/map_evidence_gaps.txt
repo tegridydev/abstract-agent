@@ -1,0 +1,12 @@
+# Goal
+Map what the supplied evidence establishes, contradicts, and leaves unresolved.
+
+# Success criteria
+* Use only paper IDs present in the ledger.
+* Established and contradictory items cite evidence; unresolved questions may be uncited.
+* Keep statements concise and do not turn absence of evidence into a factual negative.
+* The containing collection determines status; do not generate status fields.
+
+{input_view}
+
+Return the requested data instance. Recheck each factual statement against the cited ledger card.

@@ -1,0 +1,16 @@
+# Goal
+Critique every candidate once as an experimental design reviewer.
+
+# Success criteria
+* Use every exact candidate_id once.
+* Score all five dimensions from 1 to 5.
+* Examine controls, outcomes, confounders, risks, feasibility, and falsifiers.
+* Return structured findings with category, severity, issue, and required_revision.
+* Set a fatal flag for internal inconsistency, undefined intervention/outcome, a non falsifiable claim, or an unsupported mechanism.
+* Avoid uniform optimistic scores.
+* Treat placeholder methods, tautological "will differ" claims without decision thresholds, modality inappropriate metrics/controls, and duplicated relations as fatal.
+* Return an empty findings list only when verdict is pass. For revise/exclude, include at most four distinct findings.
+
+{input_view}
+
+Return only the requested data instance; do not echo its schema. Verify candidate_id coverage before returning.

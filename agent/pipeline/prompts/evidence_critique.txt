@@ -1,0 +1,15 @@
+# Goal
+Critique every candidate once for evidence grounding and prior art risk.
+
+# Success criteria
+* Use every exact candidate_id once.
+* Score grounding, novelty, falsifiability, feasibility, and clarity from 1 to 5.
+* Return structured findings with category, severity, issue, and required_revision.
+* Set a fatal flag for internal inconsistency, undefined intervention/outcome, a non falsifiable claim, or an unsupported mechanism.
+* Flag unsupported claims and restatements of cited findings.
+* Avoid uniform optimistic scores.
+* Return an empty findings list only when verdict is pass. For revise/exclude, include at most four distinct findings and never duplicate them in legacy issue arrays.
+
+{input_view}
+
+Return only the requested data instance; do not echo its schema. Verify candidate_id coverage before returning.

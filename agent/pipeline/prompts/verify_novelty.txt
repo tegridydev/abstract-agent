@@ -1,0 +1,13 @@
+# Goal
+Assess the winner and alternate separately against the supplied closest prior art.
+
+# Decision rules
+* prior_art_overlap: cited prior art materially demonstrates the proposed relationship.
+* novelty_supported: the closest cited work is materially different and the proposed relationship remains absent.
+* uncertain: evidence is inadequate; topical difference alone is insufficient.
+* Cite only P1/P2/... slots from that candidate's own packet. Never cite a slot from the other candidate.
+* A non uncertain result must cite at least one supplied closest prior art slot.
+
+{input_view}
+
+Return exactly one requested result per candidate_id. Verify IDs and citations before returning.

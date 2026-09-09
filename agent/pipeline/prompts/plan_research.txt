@@ -1,0 +1,14 @@
+# Goal
+Create complementary search facets for the topic.
+
+# Success criteria
+* Interpret the topic without broadening away its distinctive terms.
+* Provide 1 to 4 indispensable topic concepts.
+* Each query is 4 to 10 plain keywords, not a question or sentence.
+* Cover mechanism, existing approaches, and closest prior art.
+
+<input_data>
+<topic>{topic}</topic>
+</input_data>
+
+Return the requested data instance. Before returning, verify that every query retains at least one distinctive topic term.

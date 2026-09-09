@@ -1,0 +1,13 @@
+# Goal
+Write a concise, cautious rationale and limitations for the selected research direction.
+
+# Success criteria
+* Write only rationale and additional limitations. The application composes the abstract and copies the audited title, hypothesis, method, predictions, falsifier, and insights unchanged.
+* Treat the hypothesis and predictions as proposed inference.
+* Introduce no facts, citations, effects, or novelty claims beyond input_data.
+* If novelty is uncertain, describe the rationale as supporting an unverified direction.
+* Do not generate status, references, claim evidence links, or provenance; the application derives them.
+
+{input_view}
+
+Return only the requested proposal prose fields. Do not echo the schema or introduce an additional claim.

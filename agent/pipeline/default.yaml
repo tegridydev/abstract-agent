@@ -1,0 +1,412 @@
+pipeline_name: Evidence-Centred Research Hypothesis Generation
+version: 6.0
+ollama_host: 'http://localhost:11434'
+ollama_timeout_seconds: 600
+minimum_unique_papers: 6
+
+context_init: [topic]
+
+steps:
+  - name: Plan Research
+    type: ollama_call
+    model: llama3.2:3b
+    model_role: planning_evidence
+    inputs: [topic]
+    outputs: [research_plan]
+    temperature: 0
+    max_output_tokens: 384
+    response_schema: research_plan
+    invalid_output: recover
+    policy: planning.research
+    prompt_version: '5'
+    system_prompt_file: prompts/system/planning.txt
+    prompt_file: prompts/plan_research.txt
+
+  - name: Build Literature Queries
+    type: tool_call
+    function: agent_helpers.build_search_query
+    inputs: [research_plan, topic]
+    outputs: [literature_queries]
+
+  - name: Retrieve Literature Candidates
+    type: tool_call
+    function: multi_source.aggregate_sources
+    inputs: [literature_queries]
+    input_bindings: {topic: literature_queries}
+    outputs: [literature_candidates, all_fetched_papers_count, source_statuses]
+    params: {max_results: 30, relevance_weight: 0.75, recency_weight: 0.15, citation_weight: 0.10, minimum_relevance: 0.3}
+
+  - name: Assess Literature Relevance
+    type: tool_call
+    function: agent_helpers.assess_relevance
+    inputs: [literature_candidates, topic, research_plan]
+    input_bindings: {candidate_papers: literature_candidates}
+    outputs: [admissible_papers, literature_relevance_decisions, rejected_literature]
+    params: {max_results: 12, minimum_score: 0.40}
+
+  - name: Check Evidence Mix
+    type: tool_call
+    function: agent_helpers.summarize_evidence_admission
+    inputs: [admissible_papers]
+    input_bindings: {top_papers: admissible_papers}
+    outputs: [top_papers, evidence_admission]
+    params: {minimum_total: 6, minimum_core: 3}
+
+  - name: Format Evidence Corpus
+    type: tool_call
+    function: agent_helpers.format_papers_for_prompt
+    inputs: [top_papers]
+    outputs: [formatted_papers]
+    params: {max_length: 1000, max_total_length: 16000, max_authors: 6}
+
+  - name: Identify Evidence Scopes
+    type: ollama_call
+    model: llama3.2:3b
+    model_role: planning_evidence
+    inputs: [topic, formatted_papers]
+    outputs: [initial_evidence_scope_options]
+    temperature: 0
+    max_output_tokens: 512
+    response_schema: evidence_scope_options
+    invalid_output: recover
+    policy: scopes.identify
+    prompt_version: '5'
+    prompt_view: scope_v5
+    system_prompt_file: prompts/system/planning.txt
+    prompt_file: prompts/identify_evidence_scopes.txt
+
+  - name: Validate Evidence Scopes
+    type: tool_call
+    function: agent_helpers.validate_scope_options
+    inputs: [initial_evidence_scope_options, top_papers]
+    input_bindings: {evidence_scope_options: initial_evidence_scope_options}
+    outputs: [evidence_scope_options, research_scope]
+
+  - name: Build Evidence Ledger
+    type: tool_call
+    function: knowledge.build_evidence_ledger
+    inputs: [top_papers, topic, research_scope]
+    outputs: [evidence_ledger, evidence_extraction_metrics]
+
+  - name: Map Evidence Gaps
+    type: ollama_call
+    model: llama3.2:3b
+    model_role: planning_evidence
+    inputs: [topic, research_scope, evidence_ledger]
+    outputs: [gap_map]
+    temperature: 0
+    max_output_tokens: 768
+    allow_partial_recovery: true
+    response_schema: gap_map
+    invalid_output: recover
+    policy: gaps.map
+    prompt_version: '5'
+    prompt_view: compact_v1
+    system_prompt_file: prompts/system/planning.txt
+    prompt_file: prompts/map_evidence_gaps.txt
+
+  - name: Prepare Candidate Kernels
+    type: tool_call
+    function: pipeline.stages.prepare_candidate_kernel_packets
+    inputs: [topic, research_scope, evidence_scope_options, evidence_ledger, gap_map, top_papers]
+    outputs: [candidate_kernel_packets]
+
+  - name: Generate Candidate Kernels
+    type: ollama_call
+    model: llama3.2:3b
+    model_role: creative
+    inputs: [candidate_kernel_packets]
+    outputs: [candidate_kernels]
+    map_input: candidate_kernel_packets
+    map_item_key: candidate_packet
+    item_failure: degrade
+    temperature: 0
+    max_output_tokens: 640
+    validation_attempts: 2
+    response_schema: candidate_kernel
+    invalid_output: recover
+    policy: hypotheses.kernel
+    prompt_version: '1'
+    system_prompt_file: prompts/system/creative.txt
+    prompt_file: prompts/generate_candidate_kernel.txt
+
+  - name: Prepare Candidate Protocols
+    type: tool_call
+    function: pipeline.stages.prepare_candidate_protocol_packets
+    inputs: [candidate_kernel_packets, candidate_kernels]
+    outputs: [candidate_protocol_packets]
+
+  - name: Generate Candidate Protocols
+    type: ollama_call
+    model: llama3.2:3b
+    model_role: creative
+    inputs: [candidate_protocol_packets]
+    outputs: [candidate_protocols]
+    map_input: candidate_protocol_packets
+    map_item_key: candidate_packet
+    item_failure: degrade
+    temperature: 0
+    max_output_tokens: 768
+    validation_attempts: 2
+    response_schema: candidate_protocol
+    invalid_output: recover
+    policy: hypotheses.protocol
+    prompt_version: '1'
+    system_prompt_file: prompts/system/creative.txt
+    prompt_file: prompts/generate_candidate_protocol.txt
+
+  - name: Compile Candidate Units
+    type: tool_call
+    function: pipeline.stages.compile_candidate_units
+    inputs: [candidate_protocol_packets, candidate_protocols, topic, research_scope, evidence_scope_options, evidence_ledger, top_papers]
+    outputs: [hypothesis_candidates]
+
+  - name: Audit Candidate Pool
+    type: tool_call
+    function: pipeline.stages.audit_candidate_pool
+    inputs: [hypothesis_candidates, evidence_ledger, topic]
+    outputs: [audited_hypothesis_candidates, candidate_validity_audits, candidate_pool_outcome]
+
+  - name: Build Evidence Grounding Packets
+    type: tool_call
+    function: pipeline.stages.prepare_all_candidate_critique_packets
+    inputs: [audited_hypothesis_candidates, candidate_validity_audits, evidence_ledger]
+    input_bindings: {hypothesis_candidates: audited_hypothesis_candidates}
+    outputs: [evidence_critique_packets]
+
+  - name: Evidence Grounding Critique
+    type: ollama_call
+    model: llama3.2:3b
+    model_role: critique
+    inputs: [evidence_critique_packets]
+    outputs: [evidence_critique_drafts]
+    map_input: evidence_critique_packets
+    map_item_key: review_packet
+    item_failure: degrade
+    temperature: 0
+    max_output_tokens: 512
+    validation_attempts: 2
+    response_schema: candidate_critique_draft
+    invalid_output: recover
+    policy: critiques.evidence_unit
+    prompt_version: '1'
+    system_prompt_file: prompts/system/critique.txt
+    prompt_file: prompts/evidence_grounding_unit.txt
+
+  - name: Compile Evidence Critiques
+    type: tool_call
+    function: pipeline.stages.compile_candidate_critiques
+    inputs: [evidence_critique_packets, evidence_critique_drafts]
+    input_bindings: {critique_packets: evidence_critique_packets, critique_drafts: evidence_critique_drafts}
+    outputs: [evidence_critiques]
+    params: {critic_source: evidence_critic}
+
+  - name: Build Methodology Critique Packets
+    type: tool_call
+    function: pipeline.stages.prepare_all_candidate_critique_packets
+    inputs: [audited_hypothesis_candidates, candidate_validity_audits, evidence_ledger]
+    input_bindings: {hypothesis_candidates: audited_hypothesis_candidates}
+    outputs: [methodology_critique_packets]
+
+  - name: Methodology Critique
+    type: ollama_call
+    model: llama3.2:3b
+    model_role: critique
+    inputs: [methodology_critique_packets]
+    outputs: [methodology_critique_drafts]
+    map_input: methodology_critique_packets
+    map_item_key: review_packet
+    item_failure: degrade
+    temperature: 0
+    max_output_tokens: 512
+    validation_attempts: 2
+    response_schema: candidate_critique_draft
+    invalid_output: recover
+    policy: critiques.methodology_unit
+    prompt_version: '1'
+    system_prompt_file: prompts/system/critique.txt
+    prompt_file: prompts/methodology_unit.txt
+
+  - name: Compile Methodology Critiques
+    type: tool_call
+    function: pipeline.stages.compile_candidate_critiques
+    inputs: [methodology_critique_packets, methodology_critique_drafts]
+    input_bindings: {critique_packets: methodology_critique_packets, critique_drafts: methodology_critique_drafts}
+    outputs: [methodology_critiques]
+    params: {critic_source: methodology_critic}
+
+  - name: Select Candidate
+    type: tool_call
+    function: pipeline.stages.select_candidate_v6
+    inputs: [audited_hypothesis_candidates, evidence_critiques, methodology_critiques, candidate_validity_audits]
+    input_bindings: {hypothesis_candidates: audited_hypothesis_candidates}
+    outputs: [selected_candidate, alternate_candidate, candidate_scorecard, candidate_selection_outcome]
+
+  - name: Revise Winning Candidate
+    type: tool_call
+    function: pipeline.stages.initialize_revision_candidate
+    inputs: [selected_candidate]
+    outputs: [revised_candidate]
+
+  - name: Audit Initial Revision
+    type: tool_call
+    function: pipeline.stages.gate_revised_candidate
+    inputs: [revised_candidate, candidate_scorecard, evidence_ledger, topic, selected_candidate]
+    outputs: [initially_validated_revised_candidate, initial_revision_validity_audit, initial_revision_outcome]
+
+  - name: Prepare Revision Repair
+    type: tool_call
+    function: pipeline.stages.prepare_revision_repair_packets
+    inputs: [initially_validated_revised_candidate, initial_revision_validity_audit, initial_revision_outcome, candidate_scorecard, evidence_ledger, research_scope, top_papers]
+    outputs: [revision_repair_packets]
+
+  - name: Repair Revised Candidate
+    type: ollama_call
+    model: llama3.2:3b
+    model_role: creative
+    inputs: [revision_repair_packets]
+    outputs: [revision_repair_candidates]
+    map_input: revision_repair_packets
+    map_item_key: repair_packet
+    item_failure: degrade
+    temperature: 0
+    max_output_tokens: 1024
+    validation_attempts: 1
+    allow_partial_recovery: true
+    transport_failure: conservative_fallback
+    generation_strategy: direct_structured
+    invalid_output: recover
+    policy: hypotheses.repair
+    prompt_version: '8'
+    prompt_view_budget: 6000
+    system_prompt_file: prompts/system/creative.txt
+    prompt_file: prompts/repair_hypothesis.txt
+    response_schema: hypothesis_candidate
+
+  - name: Gate Revised Candidate
+    type: tool_call
+    function: pipeline.stages.finalize_revision_candidates
+    inputs: [initially_validated_revised_candidate, initial_revision_validity_audit, initial_revision_outcome, revision_repair_candidates, candidate_scorecard, evidence_ledger, topic, selected_candidate]
+    outputs: [validated_revised_candidate, revision_validity_audit, research_outcome]
+
+  - name: Build Novelty Queries
+    type: tool_call
+    function: agent_helpers.build_novelty_queries
+    inputs: [validated_revised_candidate, alternate_candidate]
+    input_bindings: {revised_candidate: validated_revised_candidate}
+    outputs: [novelty_queries]
+
+  - name: Retrieve Closest Prior Art
+    type: tool_call
+    function: multi_source.aggregate_sources
+    inputs: [novelty_queries]
+    input_bindings: {topic: novelty_queries}
+    outputs: [novelty_candidates, novelty_fetched_papers_count, novelty_source_statuses]
+    params: {max_results: 30, relevance_weight: 0.75, recency_weight: 0.15, citation_weight: 0.10, minimum_relevance: 0.3}
+
+  - name: Assess Prior Art Relevance
+    type: tool_call
+    function: agent_helpers.assess_relevance
+    inputs: [novelty_candidates, topic, research_plan, validated_revised_candidate, alternate_candidate]
+    input_bindings: {candidate_papers: novelty_candidates, revised_candidate: validated_revised_candidate}
+    outputs: [novelty_papers, novelty_relevance_decisions, rejected_novelty_papers]
+    params: {max_results: 12, minimum_score: 0.40}
+
+  - name: Merge Evidence Pools
+    type: tool_call
+    function: agent_helpers.merge_evidence_papers
+    inputs: [top_papers, novelty_papers]
+    outputs: [evidence_papers]
+
+  - name: Format Expanded Evidence
+    type: tool_call
+    function: agent_helpers.format_papers_for_prompt
+    inputs: [evidence_papers]
+    input_bindings: {top_papers: evidence_papers}
+    outputs: [expanded_evidence]
+    params: {max_length: 1000, max_total_length: 18000, max_authors: 6}
+
+  - name: Build Novelty Verification Packets
+    type: tool_call
+    function: pipeline.recovery.prepare_novelty_packets
+    inputs: [validated_revised_candidate, alternate_candidate, novelty_papers]
+    input_bindings: {revised_candidate: validated_revised_candidate}
+    outputs: [novelty_verification_packets]
+
+  - name: Verify Candidate Novelty
+    type: ollama_call
+    model: llama3.2:3b
+    model_role: critique
+    inputs: [novelty_verification_packets]
+    outputs: [novelty_decision_drafts]
+    map_input: novelty_verification_packets
+    map_item_key: novelty_packet
+    item_failure: degrade
+    temperature: 0
+    max_output_tokens: 448
+    inactivity_timeout_seconds: 120
+    response_schema: novelty_decision_draft
+    invalid_output: recover
+    policy: novelty.unit
+    prompt_version: '1'
+    system_prompt_file: prompts/system/critique.txt
+    prompt_file: prompts/verify_novelty_unit.txt
+
+  - name: Compile Novelty Verifications
+    type: tool_call
+    function: pipeline.stages.compile_novelty_decisions
+    inputs: [novelty_verification_packets, novelty_decision_drafts]
+    input_bindings: {novelty_packets: novelty_verification_packets}
+    outputs: [novelty_verifications]
+
+  - name: Audit Novelty Evidence Breadth
+    type: tool_call
+    function: agent_helpers.audit_novelty_verifications
+    inputs: [novelty_verifications, novelty_papers]
+    outputs: [audited_novelty_verifications]
+    params: {minimum_papers: 3, minimum_providers: 2}
+
+  - name: Choose Verified Candidate
+    type: tool_call
+    function: agent_helpers.choose_verified_candidate
+    inputs: [validated_revised_candidate, alternate_candidate, audited_novelty_verifications]
+    input_bindings: {revised_candidate: validated_revised_candidate, novelty_verifications: audited_novelty_verifications}
+    outputs: [final_candidate, novelty_verification]
+
+  - name: Compose Research Proposal
+    type: ollama_call
+    model: llama3.2:3b
+    model_role: writing
+    inputs: [topic, research_scope, final_candidate, novelty_verification, expanded_evidence]
+    outputs: [research_proposal]
+    temperature: 0
+    max_output_tokens: 640
+    generation_strategy: direct_structured
+    invalid_output: recover
+    policy: proposal.compose
+    prompt_version: '5'
+    prompt_view: proposal_v5
+    system_prompt_file: prompts/system/writing.txt
+    prompt_file: prompts/compose_proposal.txt
+    response_schema: research_proposal
+
+  - name: Audit Research Proposal
+    type: tool_call
+    function: agent_helpers.validate_research_proposal
+    inputs: [research_proposal, evidence_papers, novelty_verification]
+    outputs: [audited_research_proposal, evidence_audit]
+
+final_outputs:
+  - research_outcome
+  - candidate_validity_audits
+  - revision_validity_audit
+  - audited_research_proposal
+  - evidence_audit
+  - novelty_verification
+  - candidate_scorecard
+  - evidence_papers
+  - all_fetched_papers_count
+  - novelty_fetched_papers_count
+  - source_statuses
+  - novelty_source_statuses
+  - evidence_admission

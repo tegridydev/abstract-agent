@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "abstract-agent"
+version = "5.0.0"
+description = "Research ideas using local models and public literature"
+readme = "README.md"
+requires-python = ">=3.11,<3.15"
+license = "MIT"
+dependencies = [
+  "httpx>=0.28,<0.29",
+  "ollama>=0.6,<1",
+  "pydantic>=2.11,<3",
+  "PyYAML>=6,<7",
+  "rich>=14,<15",
+]
+
+[project.scripts]
+abstract-agent = "agent.agent:main"
+
+[dependency-groups]
+dev = [
+  "pip-audit>=2.9,<3",
+  "pytest>=8.4,<10",
+  "pytest-cov>=6,<8",
+  "ruff>=0.12,<1",
+]
+
+[tool.uv]
+required-version = ">=0.11.32,<0.12"
+
+[tool.hatch.build]
+exclude = [
+  "/.abstract-agent.toml",
+  "/.abstract-agent.toml.*",
+  "/.cache/**",
+  "/.coverage",
+  "/.coverage.*",
+  "/.env",
+  "/.env.*",
+  "/.hypothesis/**",
+  "/.mypy_cache/**",
+  "/.nox/**",
+  "/.pytest_cache/**",
+  "/.ruff_cache/**",
+  "/.tox/**",
+  "/.venv/**",
+  "/agent/output/**",
+  "/build/**",
+  "/dist/**",
+  "/htmlcov/**",
+  "/knowledge/**",
+  "/**/__pycache__/**",
+  "/**/*.pyc",
+  "/**/*.pyd",
+  "/**/*.pyo",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["agent"]
+
+[tool.pytest.ini_options]
+addopts = "-q --import-mode=importlib"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["agent"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

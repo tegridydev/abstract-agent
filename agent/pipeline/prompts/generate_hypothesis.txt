@@ -1,0 +1,24 @@
+# Goal
+Propose one measurable, falsifiable research direction using the innovation axis below.
+
+# Contract
+* Return the compact scientific specification requested by the schema.
+* Use one or two of the strongest E1/E2/... evidence slots present in input_view; never copy or invent paper IDs.
+* Treat the evidence packet as closed: every evidence backed statement must be supported by one of
+  its complete evidence cards, even when an evidence gap summary mentions a named method.
+* Give the intervention/exposure and comparator short names plus reproducible operational definitions.
+* Keep outcome name and metric atomic: never put "will differ", comparator prose, or direction in them.
+* Put direction only in expected_relation and give a measurable decision_rule. A "differs" relation must state a minimum meaningful two sided effect or statistical criterion.
+* Define cause, mediator, and measurable consequence separately. Do not use placeholders such as "a proposed method", "new technique", or "TBD".
+* The experiment must name study units, procedure, and relevant controls and must be capable of violating the decision rule.
+* Treat the mechanism and novelty difference as proposed, not established.
+* Treat innovation_axis as application owned and exact. Do not rename it or broaden its scope.
+* Make a cross domain claim only when input_view contains independently attributable evidence
+  from both domains. Otherwise the application supplies boundary-condition-or-failure-mode:
+  identify a measurable operating limit, reversal, or failure condition within the selected scope.
+* Keep every text field to a short phrase or one concise sentence. Use no more than two secondary outcomes, four controls, four confounders, four risks, and three potential insights.
+
+<innovation_axis>{innovation_axis}</innovation_axis>
+{input_view}
+
+Return only one data instance matching the requested schema. Do not echo the schema. Before returning, check that every field is concrete, every metric applies to the stated system, and the response is complete JSON.
