@@ -511,15 +511,51 @@ def normalize_text(value: Any) -> str:
     return " ".join(re.findall(r"[\w]+", text))
 
 
+_DOI_RESOLVER_HOSTS = frozenset({"doi.org", "www.doi.org", "dx.doi.org"})
+
+
+def _doi_from_url(value: Any) -> str | None:
+    """Extract a DOI path only from explicitly trusted DOI resolver hosts."""
+    raw_url = str(value or "").strip()
+    if not raw_url:
+        return None
+
+    try:
+        parsed = urlsplit(raw_url)
+        hostname = (parsed.hostname or "").casefold()
+    except ValueError:
+        return None
+
+    if parsed.scheme.casefold() not in {"http", "https"}:
+        return None
+    if hostname not in _DOI_RESOLVER_HOSTS:
+        return None
+
+    doi = parsed.path.lstrip("/").strip()
+    return doi or None
+
+
+def _normalize_doi(value: Any) -> str | None:
+    """Normalize a DOI value without trusting URL substrings as host validation."""
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+
+    if raw.casefold().startswith("doi:"):
+        raw = raw[4:].strip()
+    if raw.casefold().startswith(("http://", "https://")):
+        raw = _doi_from_url(raw) or ""
+
+    normalized = raw.casefold().split("?", 1)[0].split("#", 1)[0].strip().rstrip(".,;)")
+    return normalized or None
+
+
 def canonical_identifier(paper: Paper) -> str:
-    doi = paper.get("doi")
-    if not doi and "doi.org/" in str(paper.get("url", "")).casefold():
-        doi = str(paper["url"]).casefold().split("doi.org/", 1)[1]
+    doi = _normalize_doi(paper.get("doi"))
+    if not doi:
+        doi = _normalize_doi(_doi_from_url(paper.get("url")))
     if doi:
-        normalized = str(doi).casefold().removeprefix("https://doi.org/").removeprefix("doi:")
-        normalized = normalized.split("?", 1)[0].split("#", 1)[0].strip().rstrip(".,;)")
-        if normalized:
-            return f"doi:{normalized}"
+        return f"doi:{doi}"
     for key in ("pmcid", "pmid", "arxiv_id"):
         if paper.get(key):
             return f"{key}:{str(paper[key]).casefold()}"

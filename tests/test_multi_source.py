@@ -32,6 +32,97 @@ def test_canonical_identifier_strips_doi_url_noise() -> None:
     )
 
 
+def test_canonical_identifier_extracts_doi_from_trusted_resolver_url() -> None:
+    assert (
+        multi_source.canonical_identifier(
+            paper(doi=None, url="https://doi.org/10.1/EXAMPLE?source=x#fragment")
+        )
+        == "doi:10.1/example"
+    )
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://evil.example/doi.org/10.1/fake",
+        "https://doi.org.evil.example/10.1/fake",
+        "https://doi.org@evil.example/10.1/fake",
+        "https://evil.example/?next=https://doi.org/10.1/fake",
+    ],
+)
+def test_canonical_identifier_rejects_embedded_doi_hosts(url: str) -> None:
+    assert (
+        multi_source.canonical_identifier(
+            paper(
+                doi=None,
+                url=url,
+                provider_id=None,
+                source=None,
+                title="Fallback paper",
+            )
+        )
+        == "title:fallback paper"
+    )
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://doi.org/10.1/EXAMPLE",
+        "http://doi.org/10.1/EXAMPLE",
+        "https://www.doi.org/10.1/EXAMPLE",
+        "https://dx.doi.org/10.1/EXAMPLE",
+    ],
+)
+def test_canonical_identifier_accepts_known_doi_resolver_hosts(url: str) -> None:
+    assert multi_source.canonical_identifier(paper(doi=None, url=url)) == "doi:10.1/example"
+
+
+def test_canonical_identifier_rejects_non_http_doi_resolver_url() -> None:
+    assert (
+        multi_source.canonical_identifier(
+            paper(
+                doi=None,
+                url="javascript://doi.org/10.1/fake",
+                provider_id=None,
+                source=None,
+                title="Fallback paper",
+            )
+        )
+        == "title:fallback paper"
+    )
+
+
+def test_canonical_identifier_rejects_malformed_doi_resolver_url() -> None:
+    assert (
+        multi_source.canonical_identifier(
+            paper(
+                doi=None,
+                url="https://[doi.org/10.1/fake",
+                provider_id=None,
+                source=None,
+                title="Fallback paper",
+            )
+        )
+        == "title:fallback paper"
+    )
+
+
+def test_canonical_identifier_rejects_untrusted_url_in_doi_field() -> None:
+    assert (
+        multi_source.canonical_identifier(
+            paper(
+                doi="https://doi.org.evil.example/10.1/fake",
+                url="https://example.test/paper",
+                provider_id=None,
+                source=None,
+                title="Fallback paper",
+            )
+        )
+        == "title:fallback paper"
+    )
+
+
 def test_merge_duplicates_preserves_sources_and_highest_citations() -> None:
     merged = multi_source._merge_duplicates(
         [paper(source="Crossref", citations=2), paper(source="OpenAlex", citations=20)]
