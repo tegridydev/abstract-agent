@@ -1,0 +1,39 @@
+spec_version: "0.1.0"
+name: abstract-agent
+version: 2.0.0
+description: >
+  A fully local, config-driven multi-agent pipeline for generating novel
+  academic research hypotheses, titles, and structured abstracts. Five
+  specialised sub-agents (breakdown, critique, synthesis, novelty-generation,
+  and academic structuring) collaborate via Ollama LLMs — no API keys, no cloud.
+  The pipeline searches public sources (arXiv, Semantic Scholar, PubMed,
+  bioRxiv, OpenAlex, and more), scores/ranks literature, then chains the agents
+  to produce a novelty-assessed, publication-ready research abstract with score.
+author: tegridydev
+license: MIT
+
+model:
+  preferred: ollama:gemma3:4b
+  constraints:
+    temperature: 0.7
+
+skills:
+  - literature-search
+  - hypothesis-breakdown
+  - literature-critique
+  - research-synthesis
+  - novelty-generation
+  - academic-structuring
+  - novelty-assessment
+
+runtime:
+  max_turns: 50
+  timeout: 600
+
+compliance:
+  risk_tier: standard
+  supervision:
+    human_in_the_loop: none
+    kill_switch: false
+  data_governance:
+    pii_handling: none
